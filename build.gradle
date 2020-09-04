@@ -1,0 +1,173 @@
+
+// =========== project api: 依赖相关 ================
+// buildscript{}要放在最前面
+buildscript {
+    //仓库配置
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        // 自定义仓库
+        maven { 
+            name 'comsumerrepo'
+            url 'https://plugins.gradle.org/m2/'
+            credentials {
+                username = ''
+                password = ''
+            }
+        }
+    }
+    // 插件的依赖
+    dependencies {
+        classpath 'com.cinnober.gradle:semver-git:2.2.3'
+        classpath  'com.github.jengelman.gradle.plugins:shadow:4.0.0'
+    }
+}
+
+// 只有buildscript{}能放在plugins{}的前面
+plugins {
+    id 'java'
+}
+
+//group 'com.gan'
+//version '1.0-SNAPSHOT'
+
+
+repositories {
+    mavenCentral()
+}
+
+// 项目的依赖
+dependencies {
+    // 文件树
+    compile fileTree(includes: ['*.jar'], dir: 'libs')
+    
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+println this.getAllprojects()
+println this.getSubprojects()
+
+
+// =========== project api ================
+/**
+ * project api
+ * 为所有工程进行统一配置
+ */
+allprojects {
+    Project project -> //参数可省略
+        group 'com.gan'
+        version '1.0-SNAPSHOT'
+        
+        dependencies {
+        }
+        
+}
+
+/**
+ * project api
+ * 只为所有子工程进行配置
+ */
+subprojects { Project project ->
+    if (project.plugins.hasPlugin('com.gan.library')) {
+        // 引入一个.gradle文件
+        apply from: '../myLibrary.gradle'
+    }
+}
+
+/**
+ * project api
+ * 对model1进行设置, 子工程配置一般在自己的工程内完成
+ */
+project('model1') {
+        group 'com.gan'
+        version '1.0'  //子工程的build.gradle配置会覆盖此配置
+        
+        repositories {
+            mavenCentral()
+        }
+
+        dependencies {
+        }
+}
+
+
+// =========== project api: 扩展属性 ================
+// 默认的几个属性
+// DEFAULT_BUILD_FILE = "build.gradle";
+// PATH_SEPARATOR = ":";
+// DEFAULT_BUILD_DIR_NAME = "build";
+// GRADLE_PROPERTIES = "gradle.properties";
+
+// 定义扩展属性，子工程中也可以访问
+// gradle.properties也可以定义属性
+ext {
+    commonsCli_version ='1.3.1'
+    thecommon = ':common'
+}
+// 或定义一个map
+ext.bigdataversion = [hadoop: '2.6.1',
+                      hive  : '1.1.0',
+                      commonslang: '2.6']
+// 使用扩展属性
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+//    compile "commons-cli:commons-cli:" + this.ext.commonsCli_version
+//    compile "commons-cli:commons-cli:" + this.commonsCli_version
+    compile "commons-cli:commons-cli:" + commonsCli_version
+    compile "commons-lang:commons-lang:${bigdataversion.commonslang}"
+}
+
+
+// =========== project api: 文件相关 ================
+// 文件路径获取
+println "根路径: " + rootDir.absolutePath
+println "build文件路径: " + buildDir.absolutePath
+println "当前项目路径: " + projectDir.absolutePath
+
+// 获取文件内容
+println "gradle.properties的文件内容：\n" + getFileContext("gradle.properties")
+static String getFileContext(String path) {
+    try {
+        File file = new File(path)
+        return file.text
+    } catch (Exception e) {
+        throw new GradleException("${path}文件不存在!", e)
+    }
+}
+
+// 文件拷贝
+//copy{
+//    from file("myLibrary.gradle")
+//    into buildDir
+//}
+ 
+// 遍历文件
+fileTree("${rootDir}/model1/src/main/java") { FileTree fileTree ->
+    fileTree.visit { FileTreeElement element ->
+        println "文件树遍历结果： " + element.file.name
+    }
+}
+
+
+
+// =========== project api: 生命周期监听 ================
+/**
+ * 配置阶段开始前的监听回调
+ */
+this.beforeEvaluate {
+    println("配置阶段开始！")
+}
+/**
+ * 配置阶段完成后的回调
+ */
+this.afterEvaluate {
+    println("配置阶段结束！")
+}
+/**
+ * build执行完的回调
+ */
+this.gradle.buildFinished {
+    println("build执行结束！")
+}
+
+

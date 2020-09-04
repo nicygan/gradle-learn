@@ -1,0 +1,10 @@
+rootProject.name = 'grandle-learn'
+
+println("初始化阶段开始！")
+
+include 'model1'
+if (loadModel2.toBoolean()) {
+    include 'model2'
+}
+include 'common'
+

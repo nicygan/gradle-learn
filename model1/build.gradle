@@ -1,0 +1,22 @@
+plugins {
+    id 'java'
+}
+
+group 'com.gan'
+version '1.0-SNAPSHOT'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    //  子工程可以直接使用父工程中的扩展属性
+//    compile "commons-cli:commons-cli:" + this.rootProject.ext.commonsCli_version
+//    compile "commons-cli:commons-cli:" + commonsCli_version
+    // 依赖一个工程
+    compile project(rootProject.ext.thecommon)
+}
+
+
+println "model1的父工程：" + this.getParent()
