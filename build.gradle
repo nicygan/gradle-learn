@@ -4,6 +4,9 @@
 buildscript {
     //仓库配置
     repositories {
+        maven {
+            url 'http://maven.aliyun.com/nexus/content/groups/public/'
+        }
         mavenCentral()
         mavenLocal()
         // 自定义仓库
@@ -40,7 +43,14 @@ repositories {
 dependencies {
     // 文件树
     compile fileTree(includes: ['*.jar'], dir: 'libs')
-    
+    compile('org.hibernate:hibernate:3.1.3'){
+        // 排除包
+//        exclude module: 'cglib'
+//        exclude group: 'org.jmock'
+//        exclude group: 'org.unwanted', module: 'iAmBuggy'
+        // 不传递依赖(相当于排除此包所依赖的所有第三方包）
+        transitive false
+    }
     testCompile group: 'junit', name: 'junit', version: '4.12'
 }
 
@@ -171,3 +181,97 @@ this.gradle.buildFinished {
 }
 
 
+// =========== project api: 执行外部命令 ================
+task('copyfile'){
+    println 'copyfile'
+    doLast {
+        def commad = "cp ${rootDir}/common/testfile ${rootDir}/common/build/"
+        exec {
+            try {
+                executable 'bash'
+                args '-c', commad
+                println '文件拷贝完成。'
+            }catch(GradleException e){
+                println "执行外部命令出错! ${e.toString()}"
+                throw e
+            }
+        }
+    }
+}
+
+
+
+// =========== project api: task ================
+// 定义task,并添加配置信息
+task taskname(group:'my task', description: 'test task') {
+    println 'taskname'
+}
+tasks.create('taskname2'){
+    group 'my task'
+    description 'test task'
+    println 'taskname2'
+    
+}
+// doFirst/doLast
+task taskname3(group: 'my task', description: 'test task'){
+    println "配置阶段执行：taskname3"
+    doFirst {
+        println '执行阶段： 首先执行 taskname3'
+    }
+    doLast {
+        println '执行阶段： 最后执行 taskname3'
+    }
+}
+taskname3.doFirst {
+    println '执行阶段： 首先执行2 taskname3'
+}
+taskname3.doLast {
+    println '执行阶段： 最后执行2 taskname3'
+}
+
+task taskname4(group: 'my task', description: 'test task'){
+    doLast {
+        println '执行阶段： taskname4'
+    }
+}
+task libTask01(group: 'my task', description: 'test task') {
+    doLast {
+        println '执行阶段： libTask01'
+    }
+}
+task libTask02(group: 'my task', description: 'test task') {
+    doLast {
+        println '执行阶段： libTask02'
+    }
+}
+
+// task依赖关系(被依赖的task要放在上面）
+task taskname5(group: 'my task', description: 'test task'){
+    dependsOn taskname4, taskname3
+    // 依赖所有以libTask开头的task
+    dependsOn tasks.findAll { Task task ->
+        return task.name.startsWith('libTask')
+    }
+    doLast {
+        println '执行阶段： taskname5'
+    }
+}
+
+
+
+// 示例： 统计build的时长
+def begin, end
+afterEvaluate { // 为保障所有task都已配置完毕
+    def preBuildTask = tasks.getByName('classes')
+    preBuildTask.doFirst {
+        begin = System.currentTimeMillis()
+        println 'build begin time: ' + begin
+    }
+
+    def buildTask = tasks.getByName('build')
+    buildTask.doLast {
+        end = System.currentTimeMillis()
+        println 'build end time: ' + end
+        println "build time: ${end - begin}ms"
+    }
+}
