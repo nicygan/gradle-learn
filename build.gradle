@@ -245,9 +245,9 @@ task libTask02(group: 'my task', description: 'test task') {
     }
 }
 
-// task依赖关系(被依赖的task要放在上面）
+// task依赖关系1、dependsOn(被依赖的task要放在上面）
 task taskname5(group: 'my task', description: 'test task'){
-    dependsOn taskname4, taskname3
+    dependsOn taskname4, taskname3  //默认会按名字的自然排序执行
     // 依赖所有以libTask开头的task
     dependsOn tasks.findAll { Task task ->
         return task.name.startsWith('libTask')
@@ -257,6 +257,40 @@ task taskname5(group: 'my task', description: 'test task'){
     }
 }
 
+// task依赖关系2、input/output（只能通过文件进行数据传递) 必须手动指定执行顺序
+def tmpFileName = 'tmpFile'
+task writeTask(group: 'my task', description: 'test task'){
+    inputs.properties('msgkey': 'there is some message')
+    outputs.file(tmpFileName)
+    doLast {
+        File file = outputs.getFiles().getSingleFile()
+//        file.deleteOnExit() //为什么删不掉
+        file.write(inputs.getProperties().get('msgkey').toString())
+//        file.withWriter {writer -> writer.write('there is some message')}
+        println 'write successful'
+    }
+}
+task readTask(group: 'my task', description: 'test task'){
+    mustRunAfter writeTask //必须手动指定执行顺序
+    inputs.file tmpFileName
+    doLast {
+        File file = inputs.files.singleFile
+        println file.text
+    }
+}
+task writeReadTest(group: 'my task', description: 'test task'){
+    dependsOn(readTask, writeTask) 
+    doLast {
+    }
+}
+
+// 把自定义的task追加到build任务后，使之可默认执行 不成功！
+afterEvaluate {
+    def buildTask = tasks.getByName('build')
+    buildTask.doLast {
+//        writeReadTest
+    }
+}
 
 
 // 示例： 统计build的时长
